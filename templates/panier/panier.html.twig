@@ -104,7 +104,7 @@
 						                <img class="img1" src={{asset("assets/images/imagePanier.png")}} alt="" width="180px" class="mt-3 mb-3"> 
 						                <h3 style="font-weight: bold;">Coût totale: {{totalPrice}} DT</h3>
 
-                                        <h5 style="margin-top: 15px;">Client</h5>
+                                        <h5 style="margin-top: 15px;">{{connectedUser.prenom}} {{connectedUser.nom}}</h5>
                                         <h6 style="margin-top: -7px;">Allez</h6>
 
 						                <a href="{{ path('app_commands') }}" class="button-77">Commander</a>

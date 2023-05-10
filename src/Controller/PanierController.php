@@ -3,6 +3,7 @@
 namespace App\Controller;
 use App\Service\BasketService;
 
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -11,6 +12,7 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use App\Repository\ArticleRepository;
 use App\Repository\BasketRepository;
 use App\Repository\UtilisateurRepository;
+use Twilio\Rest\Preview\HostedNumbers\ReadAuthorizationDocumentOptions;
 
 class PanierController extends AbstractController
 {
@@ -22,10 +24,15 @@ class PanierController extends AbstractController
     }
 
     #[Route('/panier', name: 'app_panier')]
-    public function index( BasketService $basketService, UtilisateurRepository $userRep ): Response
+    public function index( BasketService $basketService, UtilisateurRepository $userRep, Request $request): Response
     {
-        $connectedUser = $userRep->find(32);
-        $basketData = $basketService->getCartItems(32);
+        $session=  $request->getSession();
+        $connectedUser=$session->get('user');
+        if($connectedUser==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
+        $basketData = $basketService->getCartItems($connectedUser->getIdUser());
         $basketItemsCount = count($basketData);
 
         $totalPrice = array_reduce($basketData , function ($total, $product) {
@@ -43,9 +50,11 @@ class PanierController extends AbstractController
 
 
     #[Route('/addToBasket/{idArticle}', name: 'app_addToBasket')]
-    public function addToBasket($idArticle, BasketService $basketService, UtilisateurRepository $userRep , ArticleRepository $articleRep): Response
+    public function addToBasket(Request $request,$idArticle, BasketService $basketService, UtilisateurRepository $userRep , ArticleRepository $articleRep): Response
     {
-        $connectedUser = $userRep->find(32);
+        $session=  $request->getSession();
+        $connectedUser=$session->get('user');
+        $connectedUser = $userRep->find($connectedUser->getIdUser());
 
         $basketService->addToCart($connectedUser->getIdUser(), $idArticle, $userRep , $articleRep);
         

@@ -95,10 +95,13 @@ class ArticleController extends AbstractController
     #[Route('/articless', name: 'display_articles')]
     public function index(Request $request): Response
     {$session=  $request->getSession();
+
         $usersession=$session->get('user');
         if($usersession==null)
         {
             return $this->redirectToRoute("app_login");
+        }else if($usersession->getRole()!="admin"){
+            return $this->redirectToRoute('display_prod_front');
         }
 
 

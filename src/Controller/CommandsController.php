@@ -20,13 +20,24 @@ use Doctrine\ORM\EntityManagerInterface;
 
 class CommandsController extends AbstractController
 {
+    private $session;
+
+    public function __construct(SessionInterface $session)
+    {
+        $this->session = $session;
+    }
 
     #[Route('/command', name: 'app_commands')]
-    public function index(BasketService $basketService, UtilisateurRepository $userRep): Response
+    public function index(Request $request,BasketService $basketService, UtilisateurRepository $userRep): Response
     {
+        $session=  $request->getSession();
+        $connectedUser=$session->get('user');
+        if($connectedUser==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
 
-        $connectedUser = $userRep->find(32);
-        $basketData = $basketService->getCartItems(32);
+        $basketData = $basketService->getCartItems($connectedUser->getIdUser());
         $basketItemsCount = count($basketData);
 
         $totalPrice = array_reduce($basketData, function ($total, $product) {
@@ -44,6 +55,7 @@ class CommandsController extends AbstractController
 
     #[Route('/confirmCommand/{livMethod}/{payMethod}', name: 'app_confirmCommand')]
     public function ajoutCommand(
+        Request $request,
         CommandsRepository $commandsRepository,
         UtilisateurRepository $userRep,
         BasketService $basketService,
@@ -52,14 +64,16 @@ class CommandsController extends AbstractController
         $payMethod
         ): Response {
 
-        $connectedUser = $userRep->find(32);
+        $session=  $request->getSession();
+        $connectedUser=$session->get('user');
+
         $command = new Commands();
 
         $command->setDateCommande(new \DateTime());
-        $command->setIdClient($connectedUser);
+        $command->setIdClient($userRep->find($connectedUser->getIdUser()));
         $command->setEtatCommande('En Attente');
 
-        $basketData = $basketService->getCartItems(32);
+        $basketData = $basketService->getCartItems($connectedUser->getIdUser());
 
         $totalPrice = array_reduce($basketData, function ($total, $product) {
             return $total + $product->getIdArticle()->getArtprix();
@@ -84,7 +98,7 @@ class CommandsController extends AbstractController
         // add flash message
         $this->addFlash('success', 'Commande effectuée avec succès');
         if($payMethod == 'Cash'){
-            $basketService->emptyCart(32);
+            $basketService->emptyCart($connectedUser->getIdUser());
             return $this->redirectToRoute('display_prod_front');
         }
 
@@ -104,14 +118,21 @@ class CommandsController extends AbstractController
     }
 
     #[Route('/afficheCommandClient/{idCommand}', name: 'app_afficheCommandClient')]
-    public function afficheCommand(CommandsRepository $rep, $idCommand, CommandArticlesRepository $commandArticlesRep, CommandService $commandServ, BasketService $basketService): Response
+    public function afficheCommand(Request $request, CommandsRepository $rep, $idCommand, CommandArticlesRepository $commandArticlesRep, CommandService $commandServ, BasketService $basketService): Response
     {
+        $session=  $request->getSession();
+        $connectedUser=$session->get('user');
+        if($connectedUser==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
+
         $numCommand = $commandServ->generateOrderNumber($idCommand);
         $command = $rep->find($idCommand);
 
         $commandArticles = $commandArticlesRep->findBy(['command' => $idCommand]);
 
-        $basketItemsCount= count($basketService->getCartItems(32));
+        $basketItemsCount= count($basketService->getCartItems($connectedUser->getIdUser()));
 
 
         return $this->render('commands/affichageCommand.html.twig', [
@@ -141,15 +162,22 @@ class CommandsController extends AbstractController
 
 
     #[Route('/commandHistory', name: 'app_commandHistory')]
-    public function commandHistory(CommandsRepository $rep, BasketService $basketService): Response
+    public function commandHistory(CommandsRepository $rep, BasketService $basketService, Request $request): Response
     {
+        $session=  $request->getSession();
+        $connectedUser=$session->get('user');
+        if($connectedUser==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
+
         $Encourslist = [];
         $EnAttentelist = [];
         $Livrelist = [];
         $Annulelist = [];
         
         // Récupère toutes les commandes du client
-        $commands = $rep->findBy(['idClient' => 32]);
+        $commands = $rep->findBy(['idClient' => $connectedUser->getIdUser()]);
 
         // Parcourt chaque commande
         foreach ($commands as $command) {
@@ -183,7 +211,7 @@ class CommandsController extends AbstractController
                 $Annulelist[] = $command;
             }
         }
-        $basketItemsCount= count($basketService->getCartItems(32));
+        $basketItemsCount= count($basketService->getCartItems($connectedUser->getIdUser()));
 
         return $this->render('commands/listCommandsClient.html.twig', [
             'controller_name' => 'CommandsController',
