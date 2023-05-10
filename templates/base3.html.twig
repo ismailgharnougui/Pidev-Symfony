@@ -80,9 +80,9 @@
                 <div class="dropdown-menu bg-light border-0 m-0">
 
                     <a class="dropdown-header" style="font-size: 16px;">Mokhtar Hadded</a>
-                    <a href="quote.html" class="dropdown-item"><i class="fa-solid fa-user"></i>Profile</a>
+                    <a href="{{ path('app_modifier',{"id":app.session.get('user').getIdUser}) }}" class="dropdown-item"><i class="fa-solid fa-user"></i>Profile</a>
                     <a href="404.html" class="dropdown-item"> <i class="fas fa-question-circle"></i> Besoin d'aide ?</a>
-                    <a href="404.html" class="dropdown-item"> <i class="fas fa-sign-out-alt"></i> Se déconnecter</a>
+                    <a href="{{ path('app_logout') }}" class="dropdown-item"> <i class="fas fa-sign-out-alt"></i> Se déconnecter</a>
                 </div>
             </div>
 

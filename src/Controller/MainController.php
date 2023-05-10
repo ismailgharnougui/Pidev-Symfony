@@ -68,10 +68,6 @@ class MainController extends AbstractController
                 // handle the login
                 return $this->redirectToRoute('display_articles');
             }
-
-
-
-
         }
 
         return $this->render('main/login.html.twig', [
@@ -139,5 +135,16 @@ public function indexModifier(Request $request, $id): Response
 
     return $this->render('main/modifierUser.html.twig', ['f' => $form->createView()]);
 }
+
+    /**
+     * @Route("/logout", name="app_logout")
+     */
+    public function logout(Request $request): Response
+    {
+        $session=$request->getSession();
+        $session->clear();
+        return $this->redirectToRoute('app_login');
+
+    }
 
 }

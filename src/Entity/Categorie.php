@@ -19,6 +19,7 @@ class Categorie
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="IDENTITY")
      */
+    #[Groups("categorie")]
     private $catid;
 
     /**
@@ -29,6 +30,8 @@ class Categorie
      * @Assert\Length(max=20, maxMessage="Le champ ne doit pas dépasser {{ limit }} caractères.")
      * @Assert\Regex(pattern="/^[^0-9]*$/", message="Le champ ne doit pas contenir de chiffres.")
      */
+
+    #[Groups("categorie")]
     private $catlib;
 
     /**

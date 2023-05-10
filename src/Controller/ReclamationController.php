@@ -15,23 +15,37 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Constraints\DateTime;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\HttpFoundation\Session\Session;
 
 
 #[Route('/reclamation')]
 class ReclamationController extends AbstractController
 {
     #[Route('/', name: 'app_reclamation_index', methods: ['GET'])]
-    public function index(ReclamationRepository $reclamationRepository,UtilisateurRepository $userRepository): Response
+    public function index(Request $request ,ReclamationRepository $reclamationRepository,UtilisateurRepository $userRepository): Response
     {
-        $user=new Utilisateur();
-        $user=$userRepository->find(32);
+        $session=  $request->getSession();
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
         return $this->render('reclamation/index.html.twig', [
-            'reclamations' => $reclamationRepository->findBy(['id_user'=>$user]),
+            'reclamations' => $reclamationRepository->findBy(['id_user'=>$usersession]),
         ]);
     }
     #[Route('/adminreclamation/statistique', name: 'app_admin_reclamation_statistique', methods: ['GET'])]
-    public function statistique(ReclamationRepository $reclamationRepository,UtilisateurRepository $userRepository): Response
-    {
+    public function statistique(Request $request ,ReclamationRepository $reclamationRepository,UtilisateurRepository $userRepository): Response
+    {  $session=  $request->getSession();
+
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }else if($usersession->getRole()!="admin"){
+            return $this->redirectToRoute('display_prod_front');
+        }
+
         $reclmationresolut=count($reclamationRepository->findBy(['etat'=>"resolu"]));
         $reclmationrenonsolut=count($reclamationRepository->findBy(['etat'=>'nonresolu']));
 
@@ -42,9 +56,17 @@ class ReclamationController extends AbstractController
         ]);
     }
     #[Route('/adminreclamation', name: 'app_admin_reclamation', methods: ['GET'])]
-    public function adminreclamation(ReclamationRepository $reclamationRepository,UtilisateurRepository $userRepository): Response
+    public function adminreclamation(Request $request ,ReclamationRepository $reclamationRepository,UtilisateurRepository $userRepository): Response
     {
+        $session=  $request->getSession();
 
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }else if($usersession->getRole()!="admin"){
+            return $this->redirectToRoute('display_prod_front');
+        }
         return $this->render('reclamation/admin_index.html.twig', [
             'reclamations' => $reclamationRepository->findAll(),
 
@@ -52,8 +74,16 @@ class ReclamationController extends AbstractController
     }
 
     #[Route('/adminreclamation/{id}', name: 'app_reclamation_show_admin', methods: ['GET'])]
-    public function showadmin(Reclamation $reclamation): Response
-    {
+    public function showadmin(Request $request ,Reclamation $reclamation): Response
+    {   $session=  $request->getSession();
+
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }else if($usersession->getRole()!="admin"){
+            return $this->redirectToRoute('display_prod_front');
+        }
         return $this->render('reclamation/admin_show.html.twig', [
             'reclamation' => $reclamation,
         ]);
@@ -64,9 +94,16 @@ class ReclamationController extends AbstractController
     #[Route('/new', name: 'app_reclamation_new', methods: ['GET', 'POST'])]
     public function new(ValidatorInterface $validator,Request $request, ReclamationRepository $reclamationRepository,UtilisateurRepository $userRepository): Response
     {   $user=new Utilisateur();
-        $user=$userRepository->find(32);
 
+        $session=  $request->getSession();
 
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
+
+        $user=$userRepository->find($usersession->getIdUser());
         $reclamation = new Reclamation();
         $reclamation->setEtat("nonresolu");
         $reclamation->setIdUser($user);
@@ -149,7 +186,17 @@ class ReclamationController extends AbstractController
     }
     #[Route('deleteparadmin/{id}', name: 'app_reclamation_delete_paradmin', methods: ['POST'])]
     public function delete_paradmin(Request $request, Reclamation $reclamation, ReclamationRepository $reclamationRepository): Response
-    {
+    {    $session=  $request->getSession();
+
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {   //case user must be connected
+            return $this->redirectToRoute("app_login");
+        }else if($usersession->getRole()!="admin"){
+            //case only admin
+            return $this->redirectToRoute('display_prod_front');
+        }
+
         if ($this->isCsrfTokenValid('delete'.$reclamation->getId(), $request->request->get('_token'))) {
             $reclamationRepository->remove($reclamation, true);
         }

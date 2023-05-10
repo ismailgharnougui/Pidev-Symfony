@@ -3,6 +3,8 @@
 namespace App\Controller;
 use App\Entity\Article;
 use App\Entity\Utilisateur;
+use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 use App\Form\ArticleType;
 use App\Repository\BasketRepository;
@@ -13,7 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\Annotation\Route;
-use App\Controller\ArticleRepository;
+use App\Repository\ArticleRepository;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Color\Color;
 use Endroid\QrCode\Encoding\Encoding;
@@ -33,7 +35,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 use Symfony\Component\String\Slugger\SluggerInterface;
 use Dompdf\Dompdf;
-
+use Symfony\Component\Serializer\SerializerInterface;
 
 
 
@@ -52,9 +54,53 @@ class ArticleController extends AbstractController
         return $this->render('home/home.html.twig');
     }
 
-    #[Route('/articless', name: 'display_articles')]
-    public function index(): Response
+
+    #[Route("/displayjsonArticle", name: "app_Article_displayjson1")]
+
+    public function displayjson1Article(ArticleRepository $repo, SerializerInterface $serializer)
     {
+
+        $article = $repo->findAll();
+
+        $json = $serializer->serialize($article, 'json', ['Groups' => "article"]);
+
+        return new Response($json);
+    }
+    #[Route("/addArticleJSON", name: "addArticleJSON")]
+    public function addrecJSON(Request $req, NormalizerInterface $Normalizer,ManagerRegistry $doctrine,UtilisateurRepository $userRep)
+    {
+
+        $data = json_decode($req->getContent(), true);
+        $em = $doctrine->getManager();
+        $user= $userRep->find($data['id_user']);
+
+
+
+        $article = new Article();
+        $article->setId($req->get($user));
+        $article->setArtlib($req->get('artlib'));
+        $article->setQrcode($req->get('qrcode'));
+        $article->setArtdesc($req->get('artdesc'));
+        $article->setArtdispo($req->get('artdispo'));
+        $article->setArtimg($req->get('artimg'));
+        $article->setArtprix($req->get('artprix'));
+        $article->setCatlib($req->get('catlib'));
+
+        $em->persist($article);
+        $em->flush();
+        $jsonContent = $this->get('serializer')->serialize($article, 'json', ['Groups' => 'article']);
+        return new Response(json_encode($jsonContent));
+    }
+
+    #[Route('/articless', name: 'display_articles')]
+    public function index(Request $request): Response
+    {$session=  $request->getSession();
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
+
 
         $em = $this->getDoctrine()->getManager()->getRepository(Article::class); // ENTITY MANAGER ELY FIH FONCTIONS PREDIFINES
 
@@ -68,8 +114,17 @@ class ArticleController extends AbstractController
     #[Route('/articles/front', name: 'display_prod_front')]
     public function indexfront(Request $request, PaginatorInterface $paginator,UtilisateurRepository $userRep,BasketRepository $basketRep): Response
     {
+        $session=  $request->getSession();
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
 
-        $user =$userRep->find(32);
+        $connectedUser = $this->session->get('user');
+
+
+        $user =$userRep->find($connectedUser->getIdUser());
 
         $existingArticles = [];
 
@@ -98,7 +153,7 @@ class ArticleController extends AbstractController
         $pagination = $paginator->paginate(
             $repository,
             $request->query->getInt('page', 1), // Current page number
-            3 // Number of items per page
+            50 // Number of items per page
         );
         $basketItemsCount = count($basketItems);
 
@@ -111,6 +166,14 @@ class ArticleController extends AbstractController
     #[Route('/ajouterArticle', name: 'ajouterArticle')]
     public function ajouterArticle(Request $request, SluggerInterface $slugger): Response
     {
+        $session=  $request->getSession();
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
+
+        $connectedUser = $this->session->get('user');
 
         $prod = new Article(); // init objet
         $form = $this->createForm(ArticleType::class, $prod);
@@ -133,7 +196,7 @@ class ArticleController extends AbstractController
 
             // Utilisateur :
             $User = $this->getDoctrine()->getManager()->getRepository(Utilisateur::class)->find(
-                32
+                $connectedUser->getIdUser()
             );
 
 
@@ -204,6 +267,13 @@ class ArticleController extends AbstractController
     #[Route('/modifierArticle/{artid}', name: 'modifierArticle')]
     public function modifierArticle(Request $request, $artid): Response
     {
+        $session=  $request->getSession();
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
+
         $prod = $this->getDoctrine()->getManager()->getRepository(Article::class)->find($artid);
 
         $form = $this->createForm(ArticleType::class, $prod);
@@ -239,8 +309,14 @@ class ArticleController extends AbstractController
     }
 
     #[Route('/suppressionArticle/{artid}', name: 'suppressionArticle')]
-    public function suppressionArticle(Article $prod): Response
-    {
+    public function suppressionArticle(Request $request,Article $prod): Response
+    {$session=  $request->getSession();
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
+
         $em = $this->getDoctrine()->getManager();// ENTITY MANAGER ELY FIH FONCTIONS PREDIFINES
         $em->remove($prod);
         //MISE A JOURS
@@ -255,6 +331,12 @@ class ArticleController extends AbstractController
     #[Route('/detailArticle/{artid}', name: 'detailArticle')]
     public function detailArticle(\Symfony\Component\HttpFoundation\Request $req, $artid)
     {
+        $session=  $req->getSession();
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
 
         $em = $this->getDoctrine()->getManager();
         $prod = $em->getRepository(Article::class)->find($artid);
@@ -275,7 +357,13 @@ class ArticleController extends AbstractController
 
     #[Route('/detailArticle/front/{artid}', name: 'detailArticlefront')]
     public function detailArticlefront(\Symfony\Component\HttpFoundation\Request $req, $artid)
-    {
+    {$session=  $req->getSession();
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
+
         $em = $this->getDoctrine()->getManager();
         $prod = $em->getRepository(Article::class)->find($artid);
 
@@ -293,8 +381,14 @@ class ArticleController extends AbstractController
     }
 
     #[Route('/exportExcel', name: 'exportExcel')]
-    public function exportExcel()
-    {
+    public function exportExcel(Request $request)
+    {$session=  $request->getSession();
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
+
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
@@ -336,6 +430,12 @@ class ArticleController extends AbstractController
      */
     public function chercherArticles(\Symfony\Component\HttpFoundation\Request $request)
     {
+        $session=  $request->getSession();
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
 
         $em = $this->getDoctrine()->getManager();
         $requestString = $request->get('q');
@@ -372,8 +472,14 @@ class ArticleController extends AbstractController
 
 
     #[Route('/top', name: 'top')]
-    public function afficherTopfiveService()
-    {
+    public function afficherTopfiveService(Request $request)
+    {$session=  $request->getSession();
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
+
         $em = $this->getDoctrine()->getManager();
 
         $query = $em->createQueryBuilder(); // dql
@@ -406,7 +512,13 @@ class ArticleController extends AbstractController
 
     #[Route('/noterService/{artid}/{note}', name: 'noterService')]
     public function noterService(Request $request, $artid,$note): Response
-    {
+    {$session=  $request->getSession();
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
+
         $Services = $this->getDoctrine()->getManager()->getRepository(Article::class)->find($artid);
 
         $form = $this->createForm(ArticleType::class, $Services);
@@ -447,7 +559,13 @@ class ArticleController extends AbstractController
      * @Route("/articles/{id}/note", name="service_note")
      */
     public function addNoteToService(Request $request, Article $service)
-    {
+    {$session=  $request->getSession();
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
+
         $note = $request->request->get('note');
 
         if ($note) {
@@ -463,7 +581,13 @@ class ArticleController extends AbstractController
 
     #[Route('/getNoterArticlePage/{artid}', name: 'getNoterArticlePage')]
     public function getNoterServicePage(\Symfony\Component\HttpFoundation\Request $req, $artid)
-    {
+    {$session=  $req->getSession();
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
+
         $em = $this->getDoctrine()->getManager();
         $Services = $em->getRepository(Article::class)->find($artid);
 
@@ -522,8 +646,14 @@ class ArticleController extends AbstractController
 
     // stat
     #[Route('/dashboard/stat', name: 'stat', methods: ['POST','GET'])]
-    public function VoitureStatistics( \App\Repository\ArticleRepository $repo): Response
-    {
+    public function VoitureStatistics( \App\Repository\ArticleRepository $repo,Request $request): Response
+    {$session=  $request->getSession();
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
+
         $total = $repo->countByCatLib('personnes') +
             $repo->countByCatLib('classique') +
             $repo->countByCatLib('paysages');

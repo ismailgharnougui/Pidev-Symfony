@@ -102,8 +102,8 @@ class LivreurController extends AbstractController
         return $this->redirectToRoute('app_livreur_index', [], Response::HTTP_SEE_OTHER);
     }
 
-    #[Route('/dashboard', name: 'app_dashboard')]
-    public function index(LivreurRepository $rep): Response
+    #[Route('/dashboard/stat1', name: 'app_dashboardd')]
+    public function dashboard(LivreurRepository $rep): Response
     {
 
         $livreurs = $rep->countByRegion();

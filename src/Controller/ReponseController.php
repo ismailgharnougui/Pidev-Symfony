@@ -22,8 +22,15 @@ use Symfony\Component\Mime\Email;
 class ReponseController extends AbstractController
 {
     #[Route('/', name: 'app_reponse_index', methods: ['GET'])]
-    public function index(ReponseRepository $reponseRepository): Response
+    public function index(Request $request,ReponseRepository $reponseRepository): Response
     {
+        $session=  $request->getSession();
+
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }
         return $this->render('reponse/index.html.twig', [
             'reponses' => $reponseRepository->findAll(),
         ]);
@@ -31,7 +38,19 @@ class ReponseController extends AbstractController
 
     #[Route('/new/{idreclmaation}', name: 'app_reponse_new', methods: ['GET', 'POST'])]
     public function new(Client $twilio,MailerInterface $mailer,ValidatorInterface $validator,Request $request, ReponseRepository $reponseRepository , ReclamationRepository $reclamationRepository ,$idreclmaation): Response
-    {   $reclamation = $reclamationRepository->find($idreclmaation);
+    {
+
+        $session=  $request->getSession();
+
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }else if($usersession->getRole()!="admin"){
+            return $this->redirectToRoute('display_prod_front');
+        }
+
+        $reclamation = $reclamationRepository->find($idreclmaation);
         $useremail=$reclamation->getIdUser()->getMail();
         $reponse = new Reponse();
 
@@ -91,8 +110,16 @@ class ReponseController extends AbstractController
     }
 
     #[Route('/{idRep}', name: 'app_reponse_show', methods: ['GET'])]
-    public function show(Reponse $reponse): Response
-    {
+    public function show(Request $request,Reponse $reponse): Response
+    {$session=  $request->getSession();
+
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }else if($usersession->getRole()!="admin"){
+            return $this->redirectToRoute('display_prod_front');
+        }
         return $this->render('reponse/show.html.twig', [
             'reponse' => $reponse,
         ]);
@@ -100,7 +127,15 @@ class ReponseController extends AbstractController
 
     #[Route('/{idRep}/edit', name: 'app_reponse_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Reponse $reponse, ReponseRepository $reponseRepository): Response
-    {
+    {$session=  $request->getSession();
+
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }else if($usersession->getRole()!="admin"){
+            return $this->redirectToRoute('display_prod_front');
+        }
         $form = $this->createForm(ReponseType::class, $reponse);
         $form->handleRequest($request);
 
@@ -118,7 +153,15 @@ class ReponseController extends AbstractController
 
     #[Route('/{idRep}', name: 'app_reponse_delete', methods: ['POST'])]
     public function delete(Request $request, Reponse $reponse, ReponseRepository $reponseRepository): Response
-    {
+    {$session=  $request->getSession();
+
+        $usersession=$session->get('user');
+        if($usersession==null)
+        {
+            return $this->redirectToRoute("app_login");
+        }else if($usersession->getRole()!="admin"){
+            return $this->redirectToRoute('display_prod_front');
+        }
         if ($this->isCsrfTokenValid('delete'.$reponse->getIdRep(), $request->request->get('_token'))) {
             $reponseRepository->remove($reponse, true);
         }

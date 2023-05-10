@@ -20,6 +20,8 @@ class Article
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="IDENTITY")
      */
+    #[Groups("article")]
+
     private $artid;
 
     /**
@@ -30,6 +32,8 @@ class Article
      * @Assert\Length(max=20, maxMessage="Le champ ne doit pas dépasser {{ limit }} caractères.")
      * @Assert\Regex(pattern="/^[^0-9]*$/", message="Le champ ne doit pas contenir de chiffres.")
      */
+    #[Groups("article")]
+
     private $artlib;
 
     /**
@@ -39,6 +43,8 @@ class Article
      * @Assert\NotBlank(message="Le champ ne doit pas être vide.")
      * @Assert\Length(max=200, maxMessage="Le champ ne doit pas dépasser {{ limit }} caractères.")
      */
+    #[Groups("article")]
+
     private $artdesc;
 
     /**
@@ -47,6 +53,8 @@ class Article
      * @ORM\Column(name="ArtDispo", type="integer", nullable=false)
      * * @Assert\NotBlank(message="Le champ ne doit pas être vide.")
      */
+    #[Groups("article")]
+
     private $artdispo;
 
     /**
@@ -56,6 +64,8 @@ class Article
      * @Assert\NotBlank(message="Le champ ne doit pas être vide.")
      * @Assert\Length(max=255, maxMessage="Le champ ne doit pas dépasser {{ limit }} caractères.")
      */
+    #[Groups("article")]
+
     private $artimg;
 
 
@@ -64,6 +74,8 @@ class Article
      *
      * @ORM\Column(name="QrCode", type="string", length=255, nullable=true)
      */
+    #[Groups("article")]
+
     private $qrcode;
 
     /**
@@ -74,6 +86,8 @@ class Article
 
      * @Assert\Positive(message="La valeur doit être positive.")
      */
+    #[Groups("article")]
+
     private $artprix;
 
 
@@ -90,6 +104,7 @@ class Article
      * })
      */
 
+    #[Groups("article")]
 
     private $catlib;
 
@@ -101,6 +116,8 @@ class Article
      *   @ORM\JoinColumn(name="id_user", referencedColumnName="id_user")
      * })
      */
+    #[Groups("article")]
+
     private $id_user;
 
 
@@ -108,6 +125,8 @@ class Article
     /**
      * @ORM\Column(type="integer",nullable=true)
      */
+    #[Groups("article")]
+
     private $note;
 
     /**
@@ -266,7 +285,11 @@ class Article
     {
         $this->note = $note;
     }
-
+    public function __toString(): string
+    {
+        // TODO: Implement __toString() method.
+        return $this->catlib;
+    }
 
 
 }
